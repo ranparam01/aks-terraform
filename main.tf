@@ -85,10 +85,10 @@ resource "null_resource" "provision" {
   }
 
   /**
-                                                                                                        provisioner "local-exec" {
-                                                                                                          command = "echo "$(terraform output kube_config)" > ~/.kube/azurek8s && export KUBECONFIG=~/.kube/azurek8s"
-                                                                                                        } 
-                                                                                                      **/
+                                                                                                          provisioner "local-exec" {
+                                                                                                            command = "echo "$(terraform output kube_config)" > ~/.kube/azurek8s && export KUBECONFIG=~/.kube/azurek8s"
+                                                                                                          } 
+                                                                                                        **/
   provisioner "local-exec" {
     command = "helm init --upgrade"
   }
@@ -107,15 +107,16 @@ resource "null_resource" "provision" {
       EOF
   }
 
-  provisioner "local-exec" {
-    command = "helm install stable/cert-manager  --set ingressShim.defaultIssuerName=letsencrypt-staging  --set ingressShim.defaultIssuerKind=ClusterIssuer"
-  }
-
   /**
-                                                                                          provisioner "local-exec" {
-                                                                                            command = "kubectl create -f azure-load-balancer.yaml"
-                                                                                          }
-                                                                                  **/
+    provisioner "local-exec" {
+      command = "helm install stable/cert-manager  --set ingressShim.defaultIssuerName=letsencrypt-staging  --set ingressShim.defaultIssuerKind=ClusterIssuer"
+    }
+  **/
+  /**
+                                                                                            provisioner "local-exec" {
+                                                                                              command = "kubectl create -f azure-load-balancer.yaml"
+                                                                                            }
+                                                                                    **/
   provisioner "local-exec" {
     command = "helm repo add azure-samples https://azure-samples.github.io/helm-charts/ && helm repo add gitlab https://charts.gitlab.io/ && helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/ && helm repo add bitnami https://charts.bitnami.com/bitnami"
   }
@@ -171,44 +172,43 @@ resource "null_resource" "provision" {
     }
   }
 
-  /**
-        provisioner "local-exec" {
-          command = "git clone https://github.com/coreos/prometheus-operator.git"
-        }
+  provisioner "local-exec" {
+    command = "git clone https://github.com/coreos/prometheus-operator.git"
+  }
 
-        provisioner "local-exec" {
-          command = <<EOF
+  provisioner "local-exec" {
+    command = <<EOF
                   sleep 240
             EOF
-        }
+  }
 
-        provisioner "local-exec" {
-          command = "cd prometheus-operator && kubectl apply -f bundle.yaml"
-        }
+  provisioner "local-exec" {
+    command = "cd prometheus-operator && kubectl apply -f bundle.yaml"
+  }
 
-        provisioner "local-exec" {
-          command = "cd prometheus-operator && mkdir -p helm/kube-prometheus/charts"
-        }
+  provisioner "local-exec" {
+    command = "cd prometheus-operator && mkdir -p helm/kube-prometheus/charts"
+  }
 
-        provisioner "local-exec" {
-          command = "cd prometheus-operator && helm package -d helm/kube-prometheus/charts helm/alertmanager helm/grafana helm/prometheus  helm/exporter-kube-dns helm/exporter-kube-scheduler helm/exporter-kubelets helm/exporter-node helm/exporter-kube-controller-manager helm/exporter-kube-etcd helm/exporter-kube-state helm/exporter-coredns helm/exporter-kubernetes"
-        }
+  provisioner "local-exec" {
+    command = "cd prometheus-operator && helm package -d helm/kube-prometheus/charts helm/alertmanager helm/grafana helm/prometheus  helm/exporter-kube-dns helm/exporter-kube-scheduler helm/exporter-kubelets helm/exporter-node helm/exporter-kube-controller-manager helm/exporter-kube-etcd helm/exporter-kube-state helm/exporter-coredns helm/exporter-kubernetes"
+  }
 
-        provisioner "local-exec" {
-          command = <<EOF
+  provisioner "local-exec" {
+    command = <<EOF
                   sleep 60
             EOF
-        }
+  }
 
-        provisioner "local-exec" {
-          command = "cd prometheus-operator && helm install helm/kube-prometheus --name kube-prometheus --wait --namespace monitoring"
+  provisioner "local-exec" {
+    command = "cd prometheus-operator && helm install helm/kube-prometheus --name kube-prometheus --wait --namespace monitoring"
 
-          timeouts {
-            create = "20m"
-            delete = "20m"
-          }
-        }
-      **/
+    timeouts {
+      create = "20m"
+      delete = "20m"
+    }
+  }
+
   provisioner "local-exec" {
     command = <<EOF
             if [ "${var.patch_svc_lbr_external_ip}" = "true" ]; then
