@@ -85,10 +85,10 @@ resource "null_resource" "provision" {
   }
 
   /**
-                                                                                                  provisioner "local-exec" {
-                                                                                                    command = "echo "$(terraform output kube_config)" > ~/.kube/azurek8s && export KUBECONFIG=~/.kube/azurek8s"
-                                                                                                  } 
-                                                                                                **/
+                                                                                                      provisioner "local-exec" {
+                                                                                                        command = "echo "$(terraform output kube_config)" > ~/.kube/azurek8s && export KUBECONFIG=~/.kube/azurek8s"
+                                                                                                      } 
+                                                                                                    **/
   provisioner "local-exec" {
     command = "helm init --upgrade"
   }
@@ -112,10 +112,10 @@ resource "null_resource" "provision" {
   }
 
   /**
-                                                                                    provisioner "local-exec" {
-                                                                                      command = "kubectl create -f azure-load-balancer.yaml"
-                                                                                    }
-                                                                            **/
+                                                                                        provisioner "local-exec" {
+                                                                                          command = "kubectl create -f azure-load-balancer.yaml"
+                                                                                        }
+                                                                                **/
   provisioner "local-exec" {
     command = "helm repo add azure-samples https://azure-samples.github.io/helm-charts/ && helm repo add gitlab https://charts.gitlab.io/ && helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/ && helm repo add bitnami https://charts.bitnami.com/bitnami"
   }
@@ -171,57 +171,48 @@ resource "null_resource" "provision" {
     }
   }
 
-  provisioner "local-exec" {
-    command = "git clone https://github.com/coreos/prometheus-operator.git"
-  }
-
-  provisioner "local-exec" {
-    command = <<EOF
-            sleep 240
-      EOF
-  }
-
-  provisioner "local-exec" {
-    command = "cd prometheus-operator && kubectl apply -f bundle.yaml"
-  }
-
   /**
-                                              provisioner "local-exec" {
-                                                command = "cd prometheus-operator && helm install helm/prometheus-operator --name prometheus-operator --namespace monitoring --set rbacEnable=false --wait --timeout 1000"
+      provisioner "local-exec" {
+        command = "git clone https://github.com/coreos/prometheus-operator.git"
+      }
 
-                                                timeouts {
-                                                  create = "16m"
-                                                  delete = "16m"
-                                                }
-                                              }
-                                            **/
-  provisioner "local-exec" {
-    command = "cd prometheus-operator && mkdir -p helm/kube-prometheus/charts"
-  }
+      provisioner "local-exec" {
+        command = <<EOF
+                sleep 240
+          EOF
+      }
 
-  provisioner "local-exec" {
-    command = "cd prometheus-operator && helm package -d helm/kube-prometheus/charts helm/alertmanager helm/grafana helm/prometheus  helm/exporter-kube-dns helm/exporter-kube-scheduler helm/exporter-kubelets helm/exporter-node helm/exporter-kube-controller-manager helm/exporter-kube-etcd helm/exporter-kube-state helm/exporter-coredns helm/exporter-kubernetes"
-  }
+      provisioner "local-exec" {
+        command = "cd prometheus-operator && kubectl apply -f bundle.yaml"
+      }
 
-  provisioner "local-exec" {
-    command = <<EOF
-            sleep 60
-      EOF
-  }
+      provisioner "local-exec" {
+        command = "cd prometheus-operator && mkdir -p helm/kube-prometheus/charts"
+      }
 
-  provisioner "local-exec" {
-    command = "cd prometheus-operator && helm install helm/kube-prometheus --name kube-prometheus --wait --namespace monitoring"
+      provisioner "local-exec" {
+        command = "cd prometheus-operator && helm package -d helm/kube-prometheus/charts helm/alertmanager helm/grafana helm/prometheus  helm/exporter-kube-dns helm/exporter-kube-scheduler helm/exporter-kubelets helm/exporter-node helm/exporter-kube-controller-manager helm/exporter-kube-etcd helm/exporter-kube-state helm/exporter-coredns helm/exporter-kubernetes"
+      }
 
-    timeouts {
-      create = "20m"
-      delete = "20m"
-    }
-  }
+      provisioner "local-exec" {
+        command = <<EOF
+                sleep 60
+          EOF
+      }
 
+      provisioner "local-exec" {
+        command = "cd prometheus-operator && helm install helm/kube-prometheus --name kube-prometheus --wait --namespace monitoring"
+
+        timeouts {
+          create = "20m"
+          delete = "20m"
+        }
+      }
+    **/
   provisioner "local-exec" {
     command = <<EOF
             if [ "${var.patch_svc_lbr_external_ip}" = "true" ]; then
-                kubectl patch svc kubernetes-dashboard -p '{"spec":{"type":"LoadBalancer"}}' --namespace kube-system && kubectl patch svc aks-helloworld -p '{"spec":{"type":"LoadBalancer"}}' && kubectl patch svc kube-prometheus-grafana -p '{"spec":{"type":"LoadBalancer"}}' --namespace monitoring
+                kubectl patch svc kubernetes-dashboard -p '{"spec":{"type":"LoadBalancer"}}' --namespace kube-system && kubectl patch svc aks-helloworld -p '{"spec":{"type":"LoadBalancer"}}'
             else
                 echo ${var.patch_svc_lbr_external_ip}
             fi
@@ -240,67 +231,3 @@ resource "null_resource" "provision" {
       EOF
   }
 }
-
-/**
-resource "azurerm_storage_account" "aci-sa" {
-  name                     = "${var.resource_storage_acct}"
-  resource_group_name      = "${azurerm_resource_group.k8s.name}"
-  location                 = "${azurerm_resource_group.k8s.location}"
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-}
-
-resource "azurerm_storage_share" "aci-share" {
-  name = "${var.resource_aci-dev-share}"
-
-  resource_group_name  = "${azurerm_resource_group.k8s.name}"
-  storage_account_name = "${azurerm_storage_account.aci-sa.name}"
-
-  quota = 50
-}
-
-resource "azurerm_container_group" "aci-helloworld" {
-  name                = "${var.resource_aci-hw}"
-  location            = "${azurerm_resource_group.k8s.location}"
-  resource_group_name = "${azurerm_resource_group.k8s.name}"
-  ip_address_type     = "public"
-  dns_name_label      = "${var.resource_dns_aci-label}"
-  os_type             = "linux"
-
-  container {
-    name   = "hw"
-    image  = "seanmckenna/aci-hellofiles"
-    cpu    = "0.5"
-    memory = "1.5"
-    port   = "80"
-
-    environment_variables {
-      "NODE_ENV" = "dev"
-    }
-
-    command = "/bin/bash -c '/path to/myscript.sh'"
-
-    volume {
-      name       = "logs"
-      mount_path = "/aci/logs"
-      read_only  = false
-      share_name = "${var.resource_aci-dev-share}"
-
-      storage_account_name = "${azurerm_storage_account.aci-sa.name}"
-      storage_account_key  = "${azurerm_storage_account.aci-sa.primary_access_key}"
-    }
-  }
-
-  container {
-    name   = "sidecar"
-    image  = "microsoft/aci-tutorial-sidecar"
-    cpu    = "0.5"
-    memory = "1.5"
-  }
-
-  tags {
-    environment = "Dev"
-  }
-}
-**/
-
