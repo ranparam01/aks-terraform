@@ -85,10 +85,10 @@ resource "null_resource" "provision" {
   }
 
   /**
-                                                                                                provisioner "local-exec" {
-                                                                                                  command = "echo "$(terraform output kube_config)" > ~/.kube/azurek8s && export KUBECONFIG=~/.kube/azurek8s"
-                                                                                                } 
-                                                                                              **/
+                                                                                                  provisioner "local-exec" {
+                                                                                                    command = "echo "$(terraform output kube_config)" > ~/.kube/azurek8s && export KUBECONFIG=~/.kube/azurek8s"
+                                                                                                  } 
+                                                                                                **/
   provisioner "local-exec" {
     command = "helm init --upgrade"
   }
@@ -104,7 +104,7 @@ resource "null_resource" "provision" {
   }
 
   provisioner "local-exec" {
-    command = "helm install stable/cert-manager  --set ingressShim.defaultIssuerName=letsencrypt-staging  --set ingressShim.defaultIssuerKind=ClusterIssuer --set rbac.create=false  --set serviceAccount.create=false"
+    command = "helm install stable/cert-manager  --set ingressShim.defaultIssuerName=letsencrypt-staging  --set ingressShim.defaultIssuerKind=ClusterIssuer"
   }
 
   provisioner "local-exec" {
@@ -112,10 +112,10 @@ resource "null_resource" "provision" {
   }
 
   /**
-                                                                                  provisioner "local-exec" {
-                                                                                    command = "kubectl create -f azure-load-balancer.yaml"
-                                                                                  }
-                                                                          **/
+                                                                                    provisioner "local-exec" {
+                                                                                      command = "kubectl create -f azure-load-balancer.yaml"
+                                                                                    }
+                                                                            **/
   provisioner "local-exec" {
     command = "helm repo add azure-samples https://azure-samples.github.io/helm-charts/ && helm repo add gitlab https://charts.gitlab.io/ && helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/ && helm repo add bitnami https://charts.bitnami.com/bitnami"
   }
@@ -125,7 +125,7 @@ resource "null_resource" "provision" {
   }
 
   provisioner "local-exec" {
-    command = "helm install stable/nginx-ingress --namespace kube-system --set rbac.create=false"
+    command = "helm install stable/nginx-ingress --namespace kube-system"
   }
 
   provisioner "local-exec" {
@@ -186,15 +186,15 @@ resource "null_resource" "provision" {
   }
 
   /**
-                                            provisioner "local-exec" {
-                                              command = "cd prometheus-operator && helm install helm/prometheus-operator --name prometheus-operator --namespace monitoring --set rbacEnable=false --wait --timeout 1000"
+                                              provisioner "local-exec" {
+                                                command = "cd prometheus-operator && helm install helm/prometheus-operator --name prometheus-operator --namespace monitoring --set rbacEnable=false --wait --timeout 1000"
 
-                                              timeouts {
-                                                create = "16m"
-                                                delete = "16m"
+                                                timeouts {
+                                                  create = "16m"
+                                                  delete = "16m"
+                                                }
                                               }
-                                            }
-                                          **/
+                                            **/
   provisioner "local-exec" {
     command = "cd prometheus-operator && mkdir -p helm/kube-prometheus/charts"
   }
@@ -210,7 +210,7 @@ resource "null_resource" "provision" {
   }
 
   provisioner "local-exec" {
-    command = "cd prometheus-operator && helm install helm/kube-prometheus --name kube-prometheus --wait --namespace monitoring --set global.rbacEnable=false"
+    command = "cd prometheus-operator && helm install helm/kube-prometheus --name kube-prometheus --wait --namespace monitoring"
 
     timeouts {
       create = "20m"
